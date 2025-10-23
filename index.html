@@ -46,11 +46,6 @@
         .voted-button:hover {
             background-color: #059669; /* Emerald 600 */
         }
-        /* Admin Panel Border */
-        .admin-section {
-            background-color: #111827; /* Gray 900 */
-            border-left: 5px solid var(--primary-color);
-        }
     </style>
 </head>
 <body>
@@ -67,10 +62,10 @@
                 Current User ID: <span id="user-id-display" class="font-mono text-xs text-yellow-300">Loading...</span>
             </p>
             <div class="space-x-2">
-                <button onclick="toggleSuggestionForm(true)" id="suggest-button" class="bg-gray-600 hover:bg-gray-500 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
+                <button onclick="openAddWorldModal(false)" id="suggest-button" class="bg-gray-600 hover:bg-gray-500 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
                     <i class="fas fa-plus mr-1"></i> Suggest World
                 </button>
-                <button onclick="toggleAdminPanel()" id="admin-button" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
+                <button onclick="handleAdminPanelClick()" id="admin-button" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
                     <i class="fas fa-tools mr-1"></i> Admin Panel
                 </button>
             </div>
@@ -80,44 +75,69 @@
 
         <div id="message-area" class="text-center text-lg mt-10 text-gray-400 hidden">Loading worlds...</div>
 
-        <section id="suggestion-admin-form" class="admin-section mt-10 p-6 rounded-lg shadow-xl hidden">
-            <h2 id="form-title" class="text-3xl font-bold text-violet-400 mb-4">Suggest a New World</h2>
-            <form id="add-world-form" class="space-y-4">
-                <div>
-                    <label for="world-name" class="block text-sm font-medium text-gray-300">World Name</label>
-                    <input type="text" id="world-name" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
-                </div>
-                <div>
-                    <label for="world-creator" class="block text-sm font-medium text-gray-300">Creator Name</label>
-                    <input type="text" id="world-creator" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
-                </div>
-                <div>
-                    <label for="world-image" class="block text-sm font-medium text-gray-300">Image URL (Optional)</label>
-                    <input type="url" id="world-image" value="https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World" class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
-                </div>
-                <button type="submit" id="submit-button" class="w-full vote-button text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-gray-900">
-                    <i class="fas fa-plus-circle mr-2"></i> Submit World Suggestion
-                </button>
-            </form>
-            <div id="admin-message" class="mt-4 text-sm text-green-400 hidden"></div>
-        </section>
-
         <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
             <div id="modal-content" class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-violet-500">
                 <h3 id="modal-title" class="text-xl font-bold text-white mb-3"></h3>
                 <p id="modal-body" class="text-gray-300 mb-4"></p>
-                <button onclick="hideModal()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 rounded-lg">
+                <button onclick="hideModal('modal-backdrop')" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 rounded-lg">
                     Close
                 </button>
             </div>
         </div>
+
+        <div id="add-world-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-md w-full border-t-4 border-violet-500">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 id="add-modal-title" class="text-3xl font-bold text-violet-400">Suggest a New World</h2>
+                    <button onclick="hideModal('add-world-modal')" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <form id="add-world-form" class="space-y-4">
+                    <div>
+                        <label for="world-name" class="block text-sm font-medium text-gray-300">World Name</label>
+                        <input type="text" id="world-name" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
+                    </div>
+                    <div>
+                        <label for="world-creator" class="block text-sm font-medium text-gray-300">Creator Name</label>
+                        <input type="text" id="world-creator" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
+                    </div>
+                    <div>
+                        <label for="world-image" class="block text-sm font-medium text-gray-300">Image URL (Optional)</label>
+                        <input type="url" id="world-image" value="https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World" class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
+                    </div>
+                    <button type="submit" id="add-submit-button" class="w-full vote-button text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                        <i class="fas fa-plus-circle mr-2"></i> Submit World Suggestion
+                    </button>
+                    <div id="add-form-message" class="mt-4 text-sm text-center text-green-400 hidden"></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="suggestions-review-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden justify-center z-50 overflow-y-auto pt-10 pb-10">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full h-fit border-t-4 border-violet-500 mx-4">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 class="text-3xl font-bold text-violet-400">Admin Panel: Review Suggestions</h2>
+                    <button onclick="hideModal('suggestions-review-modal')" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <div class="space-y-4">
+                    <button onclick="openAddWorldModal(true)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                        <i class="fas fa-upload mr-2"></i> Direct Publish a New World
+                    </button>
+                    <hr class="border-gray-700">
+                    <h3 class="text-xl font-bold text-gray-300">Pending Suggestions (<span id="suggestion-count">0</span>)</h3>
+                    <div id="suggestions-list" class="space-y-4">
+                        </div>
+                </div>
+                <p id="no-suggestions-message" class="text-center text-gray-500 py-8 hidden">No pending suggestions to review! 🎉</p>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Optional verbose logging
+        import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- IMPORTANT: HARDCODED CONFIG FOR STATIC HOSTING ---
         // ⚠️ REPLACE THESE PLACEHOLDERS WITH YOUR OWN FIREBASE PROJECT CONFIG! ⚠️
@@ -147,8 +167,9 @@
         let hasVoted = {};
         let isAdmin = false;
 
-        // 1. Initialization and Authentication
+        // 1. Initialization and Authentication (No changes)
         const initFirebase = async () => {
+            // ... (Firebase Initialization Code) ...
             if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID_HERE") {
                 console.error("Firebase config is missing. Please replace placeholders with your actual keys.");
                 document.getElementById('message-area').textContent = "ERROR: Firebase config missing. Please update script with your project keys.";
@@ -185,8 +206,9 @@
             }
         };
 
-        // 2. Data Retrieval and Real-time Listening
+        // 2. Data Retrieval and Real-time Listening (No major changes)
         const loadUserVotes = (userId) => {
+            // ... (loadUserVotes Code) ...
             if (!db || !userId) return;
             const q = collection(db, USER_VOTES_COLLECTION_PATH(userId));
             
@@ -202,6 +224,7 @@
         };
 
         const listenForWorlds = () => {
+            // ... (listenForWorlds Code) ...
             if (!db) return;
 
             const worldsRef = collection(db, PUBLIC_COLLECTION_PATH);
@@ -229,8 +252,9 @@
             });
         };
 
-        // 3. UI Rendering (Same as before)
+        // 3. UI Rendering (No changes)
         const renderWorlds = (worlds) => {
+            // ... (renderWorlds Code) ...
             const container = document.getElementById('worlds-container');
             container.innerHTML = ''; 
 
@@ -267,8 +291,9 @@
             });
         };
 
-        // 4. Voting Logic (Same as before)
+        // 4. Voting Logic (No changes)
         const handleVote = async (worldId, buttonElement) => {
+            // ... (handleVote Code) ...
             if (!db || !currentUserId) {
                 showModal('Error', 'Authentication not ready. Please wait a moment.');
                 return;
@@ -317,7 +342,7 @@
             }
         };
 
-        // 5. World Submission Logic 
+        // 5. World Submission Logic (Modified for new modal and admin separation)
         const suggestWorld = async (name, creator, image_url) => {
             const suggestionRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
             await addDoc(suggestionRef, {
@@ -352,103 +377,210 @@
             const name = document.getElementById('world-name').value.trim();
             const creator = document.getElementById('world-creator').value.trim();
             const image_url = document.getElementById('world-image').value.trim() || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
+            const isDirectPublish = document.getElementById('add-modal-title').textContent.includes('Admin Panel');
 
-            const adminMessage = document.getElementById('admin-message');
-            adminMessage.classList.remove('hidden');
-            adminMessage.classList.remove('text-red-400');
-            adminMessage.classList.add('text-green-400');
-            adminMessage.textContent = 'Submitting...';
+            const messageElement = document.getElementById('add-form-message');
+            messageElement.classList.remove('hidden', 'text-red-400');
+            messageElement.classList.add('text-green-400');
+            messageElement.textContent = 'Submitting...';
 
             let success = false;
             try {
-                // Determine whether to publish directly or suggest based on isAdmin state
-                if (isAdmin) {
+                if (isDirectPublish) {
                     success = await addWorld(name, creator, image_url);
-                    adminMessage.textContent = `World "${name}" published directly!`;
+                    messageElement.textContent = `World "${name}" published directly!`;
                 } else {
                     success = await suggestWorld(name, creator, image_url);
-                    adminMessage.textContent = `World "${name}" suggested successfully! It awaits approval.`;
+                    messageElement.textContent = `World "${name}" suggested successfully! It awaits approval.`;
                 }
             } catch (error) {
                 console.error("Submission Error:", error);
-                adminMessage.textContent = `Failed to submit. Error: ${error.message}`;
-                adminMessage.classList.remove('text-green-400');
-                adminMessage.classList.add('text-red-400');
+                messageElement.textContent = `Failed to submit. Error: ${error.message}`;
+                messageElement.classList.remove('text-green-400');
+                messageElement.classList.add('text-red-400');
                 success = false;
             }
 
             if (success) {
                 form.reset();
                 document.getElementById('world-image').value = 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
-                setTimeout(() => adminMessage.classList.add('hidden'), 5000);
+                setTimeout(() => {
+                    hideModal('add-world-modal');
+                    messageElement.classList.add('hidden');
+                }, 2000);
             }
         });
 
-        // 6. Utility Functions (exposed globally for HTML onclicks)
+        // 6. Admin Review Logic (NEW)
 
-        // Function to handle the "Suggest World" button
-        window.toggleSuggestionForm = (forceShow = false) => {
-            const formContainer = document.getElementById('suggestion-admin-form');
-            const title = document.getElementById('form-title');
-            const submitButton = document.getElementById('submit-button');
+        const listenForSuggestions = () => {
+            if (!db || !isAdmin) return;
 
-            // If Admin mode is active, prevent opening as Suggestion
-            if (isAdmin && !formContainer.classList.contains('hidden')) {
-                // If the form is already open and in admin mode, do nothing on a suggestion click
-                if(title.textContent.includes('Admin Panel')) return;
+            const suggestionsRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
+            const q = query(suggestionsRef, where("status", "==", "pending"));
+
+            onSnapshot(q, (snapshot) => {
+                const suggestions = [];
+                snapshot.forEach((doc) => {
+                    suggestions.push({ id: doc.id, ...doc.data() });
+                });
+                renderSuggestions(suggestions);
+            }, (error) => {
+                console.error("Error listening to suggestions:", error);
+                document.getElementById('suggestions-list').innerHTML = `<p class="text-red-400">Error loading suggestions: ${error.message}</p>`;
+            });
+        };
+
+        const renderSuggestions = (suggestions) => {
+            const list = document.getElementById('suggestions-list');
+            const countDisplay = document.getElementById('suggestion-count');
+            const message = document.getElementById('no-suggestions-message');
+            list.innerHTML = '';
+            countDisplay.textContent = suggestions.length;
+            
+            if (suggestions.length === 0) {
+                message.classList.remove('hidden');
+                return;
+            } else {
+                message.classList.add('hidden');
             }
 
-            if (forceShow || formContainer.classList.contains('hidden')) {
-                isAdmin = false; // Ensure it's in suggestion mode
-                title.textContent = 'Suggest a New World';
-                submitButton.innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Submit World Suggestion';
-                formContainer.classList.remove('hidden');
-            } else {
-                formContainer.classList.add('hidden');
+            suggestions.forEach(suggestion => {
+                const item = document.createElement('div');
+                item.className = 'bg-gray-700 p-4 rounded-lg shadow-md border-l-4 border-yellow-500';
+                item.innerHTML = `
+                    <p class="text-lg font-bold text-white">${suggestion.name}</p>
+                    <p class="text-violet-300 text-sm mb-2">Creator: ${suggestion.creator}</p>
+                    <img src="${suggestion.image_url}" onerror="this.onerror=null; this.src='https://placehold.co/300x150/374151/E5E7EB?text=No+Image';" class="w-24 h-16 object-cover rounded-md mb-3">
+                    <p class="text-xs text-gray-400 mb-3">Suggested by: ${suggestion.suggested_by.substring(0, 8)}... at ${new Date(suggestion.created_at?.toMillis()).toLocaleDateString()}</p>
+                    <div class="flex space-x-2">
+                        <button id="approve-${suggestion.id}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm transition">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button id="decline-${suggestion.id}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm transition">
+                            <i class="fas fa-times"></i> Decline
+                        </button>
+                    </div>
+                `;
+                list.appendChild(item);
+
+                document.getElementById(`approve-${suggestion.id}`).addEventListener('click', () => approveSuggestion(suggestion));
+                document.getElementById(`decline-${suggestion.id}`).addEventListener('click', () => declineSuggestion(suggestion.id));
+            });
+        };
+
+        const approveSuggestion = async (suggestion) => {
+            if (!db || !isAdmin) return showModal('Error', 'Admin privileges required.');
+            
+            // 1. Publish to the Public Collection
+            try {
+                await addWorld(suggestion.name, suggestion.creator, suggestion.image_url);
+                showModal('Success', `World "${suggestion.name}" approved and published!`);
+            } catch (e) {
+                console.error("Error publishing world:", e);
+                return showModal('Error', `Failed to publish world. ${e.message}`);
+            }
+
+            // 2. Delete from Suggestions Collection
+            try {
+                const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestion.id);
+                await deleteDoc(suggestionRef);
+            } catch (e) {
+                console.error("Error deleting suggestion:", e);
+                showModal('Warning', `World published, but failed to delete suggestion entry.`);
             }
         };
 
-        // Function to handle the "Admin Panel" button
-        window.toggleAdminPanel = () => {
-            const formContainer = document.getElementById('suggestion-admin-form');
-            const adminButton = document.getElementById('admin-button');
-            const title = document.getElementById('form-title');
-            const submitButton = document.getElementById('submit-button');
-            
-            // If we are already admin and opening the panel again, just toggle visibility
+        const declineSuggestion = async (suggestionId) => {
+            if (!db || !isAdmin) return showModal('Error', 'Admin privileges required.');
+
+            try {
+                const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
+                await updateDoc(suggestionRef, {
+                    status: 'declined',
+                    declined_by: currentUserId,
+                    declined_at: serverTimestamp()
+                });
+                showModal('Declined', 'Suggestion marked as declined.');
+            } catch (e) {
+                console.error("Error declining suggestion:", e);
+                showModal('Error', `Failed to decline suggestion. ${e.message}`);
+            }
+        };
+
+
+        // 7. Utility Functions (exposed globally for HTML onclicks)
+
+        // Handles click on the main Admin Panel button
+        window.handleAdminPanelClick = () => {
             if (isAdmin) {
-                formContainer.classList.toggle('hidden');
+                // If already admin, open the Review Modal directly
+                showModal('suggestions-review-modal');
+                listenForSuggestions(); // Start listening for pending suggestions
                 return;
             }
 
             // Prompt for key if not admin
-            const key = prompt("Enter the Admin Key to unlock Direct Publish.");
+            const key = prompt("Enter the Admin Key to unlock the Admin Panel.");
             
             if (key === ADMIN_SECRET_KEY) {
-                // Admin Unlocked
                 isAdmin = true;
-                title.textContent = 'Admin Panel: Add New World (Direct Publish)';
-                adminButton.innerHTML = '<i class="fas fa-lock-open mr-1"></i> Admin (UNLOCKED)';
-                submitButton.innerHTML = '<i class="fas fa-upload mr-2"></i> Publish World';
-                formContainer.classList.remove('hidden');
+                // Update button text to reflect unlocked status
+                document.getElementById('admin-button').innerHTML = '<i class="fas fa-lock-open mr-1"></i> Admin (UNLOCKED)';
+                // Open the Review Modal
+                showModal('suggestions-review-modal');
+                listenForSuggestions();
             } else if (key !== null) {
-                // Incorrect Key
                 showModal('Access Denied', 'The provided key is incorrect. Use the "Suggest World" button instead.');
             }
-            // If key is null (user clicked cancel on prompt), do nothing
         };
 
-        window.showModal = (title, body) => {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-body').textContent = body;
-            document.getElementById('modal-backdrop').classList.remove('hidden');
-            document.getElementById('modal-backdrop').classList.add('flex');
+        // Opens the Add World Modal, setting it to Suggestion or Direct Publish mode
+        window.openAddWorldModal = (isPublish = false) => {
+            const title = document.getElementById('add-modal-title');
+            const submitButton = document.getElementById('add-submit-button');
+            const formContainer = document.getElementById('add-world-modal');
+            
+            // If called from the Suggestion button, enforce non-admin mode
+            if (!isPublish) {
+                title.textContent = 'Suggest a New World';
+                submitButton.innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Submit World Suggestion';
+            } else if (isAdmin && isPublish) {
+                // If called from the Admin panel and is an Admin
+                title.textContent = 'Admin Panel: Direct Publish';
+                submitButton.innerHTML = '<i class="fas fa-upload mr-2"></i> Publish World';
+            } else {
+                // Should not happen, but fallback to prevent accidental publishing
+                return showModal('Error', 'Direct publish is only available to logged-in administrators.');
+            }
+
+            // Clear previous message and open the modal
+            document.getElementById('add-form-message').classList.add('hidden');
+            showModal('add-world-modal');
+
+            // Close the Review Modal if it's open (Admin only)
+            if (document.getElementById('suggestions-review-modal').classList.contains('flex')) {
+                hideModal('suggestions-review-modal');
+            }
         };
 
-        window.hideModal = () => {
-            document.getElementById('modal-backdrop').classList.add('hidden');
-            document.getElementById('modal-backdrop').classList.remove('flex');
+        // Global Modal function now handles specific IDs
+        window.showModal = (id) => {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
         };
+
+        window.hideModal = (id) => {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
 
         // Initialize on load
         window.onload = initFirebase;
