@@ -185,12 +185,12 @@
         let currentWorldData = []; // To store world data for Admin panel management
         let isAdminLoggedIn = false; // NEW: Admin state controlled by password login
 
-        // 🚨 FIX 2: Correct Firestore Collection Paths (Must have an odd number of segments) 🚨
-        const APP_ROOT_DOCUMENT = `artifacts/${appId}`; // e.g., artifacts/vrchat-worlds-voting-app (Document ID)
+        const APP_ROOT_DOCUMENT = `artifacts/${appId}`;
 
         const PUBLIC_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/public/data/vrchat_worlds`; // 5 segments
-        const USER_VOTES_COLLECTION_PATH = (uid) => `${APP_ROOT_DOCUMENT}/users/${uid}/vrchat_user_votes`; // 7 segments
-        const SUGGESTIONS_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/admin/suggestions`; // 5 segments
+        const USER_VOTES_COLLECTION_PATH = (uid) => `${APP_ROOT_DOCUMENT}/users/${uid}/vrchat_user_votes`; // 5 segments
+        const SUGGESTIONS_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/admin/data/suggestions`; // 5 segments (fixed)
+
 
 
         // 1. Initialization and Authentication
