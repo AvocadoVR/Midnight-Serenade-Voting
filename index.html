@@ -75,6 +75,7 @@
 
         <div id="message-area" class="text-center text-lg mt-10 text-gray-400 hidden">Loading worlds...</div>
 
+        <!-- Generic Modal for Alerts/Messages -->
         <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
             <div id="modal-content" class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-violet-500">
                 <h3 id="modal-title" class="text-xl font-bold text-white mb-3"></h3>
@@ -85,6 +86,7 @@
             </div>
         </div>
 
+        <!-- Add/Suggest World Modal -->
         <div id="add-world-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
             <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-md w-full border-t-4 border-violet-500">
                 <div class="flex justify-between items-start mb-4">
@@ -112,6 +114,7 @@
             </div>
         </div>
 
+        <!-- Admin Review Modal -->
         <div id="suggestions-review-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden justify-center z-50 overflow-y-auto pt-10 pb-10">
             <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-2xl w-full h-fit border-t-4 border-violet-500 mx-4">
                 <div class="flex justify-between items-start mb-6">
@@ -135,26 +138,18 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- IMPORTANT: HARDCODED CONFIG FOR STATIC HOSTING ---
-        // ⚠️ REPLACE THESE PLACEHOLDERS WITH YOUR OWN FIREBASE PROJECT CONFIG! ⚠️
-        const appId = 'vrchat-worlds-voting-app'; // Used for the Firestore path
-        const firebaseConfig = {
-            apiKey: "AIzaSyCQQjVBo9co8w0GzGGzbw_tG7s51y34A6I",
-            authDomain: "midnight-voting-3b1bb.firebaseapp.com",
-            projectId: "midnight-voting-3b1bb",
-            storageBucket: "midnight-voting-3b1bb.firebasestorage.app",
-            messagingSenderId: "268153243141",
-            appId: "1:268153243141:web:717d164de36083c4707e6c",
-            measurementId: "G-RXQ25RHNT1"
-        };
-        // ----------------------------------------------------
+        // --- ENVIRONMENT-PROVIDED CONFIGURATION ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-vrchat-voting-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // -------------------------------------------
 
-        // --- NEW SECURITY AND COLLECTION CONSTANTS ---
-        const ADMIN_SECRET_KEY = "YourSecureAdminKey123!"; // ⚠️ CHANGE THIS! ⚠️
+        // --- SECURITY AND COLLECTION CONSTANTS ---
+        const ADMIN_SECRET_KEY = "YourSecureAdminKey123!"; // ⚠️ CHANGE THIS KEY FOR REAL DEPLOYMENTS! ⚠️
         const SUGGESTIONS_COLLECTION_PATH = `artifacts/${appId}/public/data/vrchat_suggestions`;
         const PUBLIC_COLLECTION_PATH = `artifacts/${appId}/public/data/vrchat_worlds`;
         const USER_VOTES_COLLECTION_PATH = (uid) => `artifacts/${appId}/users/${uid}/vrchat_user_votes`;
@@ -167,12 +162,11 @@
         let hasVoted = {};
         let isAdmin = false;
 
-        // 1. Initialization and Authentication (No changes)
+        // 1. Initialization and Authentication
         const initFirebase = async () => {
-            // ... (Firebase Initialization Code) ...
-            if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID_HERE") {
-                console.error("Firebase config is missing. Please replace placeholders with your actual keys.");
-                document.getElementById('message-area').textContent = "ERROR: Firebase config missing. Please update script with your project keys.";
+            if (!firebaseConfig || !firebaseConfig.projectId) {
+                console.error("Firebase config is missing from the environment.");
+                document.getElementById('message-area').textContent = "ERROR: Firebase config missing. Check environment setup.";
                 document.getElementById('message-area').classList.remove('hidden');
                 return;
             }
@@ -182,16 +176,25 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
+                // Set session persistence
                 await setPersistence(auth, browserSessionPersistence);
-                await signInAnonymously(auth);
+
+                // Authenticate using custom token if provided, otherwise sign in anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         currentUserId = user.uid;
                         document.getElementById('user-id-display').textContent = currentUserId;
+                        // Load user data and start listening for world data
                         loadUserVotes(currentUserId);
                         listenForWorlds();
                     } else {
+                        // Fallback/Safety in case of auth failure, though sign-in is attempted above
                         currentUserId = 'anonymous-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
                         document.getElementById('user-id-display').textContent = currentUserId + " (Anonymous Fallback)";
                         listenForWorlds();
@@ -200,7 +203,7 @@
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                showModal('Initialization Error', `Could not connect to Firebase. Check console for details.`);
+                showModal('Initialization Error', `Could not connect to Firebase. Check console for details. Error: ${error.message}`);
                 document.getElementById('message-area').textContent = `Initialization Error: ${error.message}`;
                 document.getElementById('message-area').classList.remove('hidden');
             }
@@ -208,15 +211,16 @@
 
         // 2. Data Retrieval and Real-time Listening (No major changes)
         const loadUserVotes = (userId) => {
-            // ... (loadUserVotes Code) ...
             if (!db || !userId) return;
             const q = collection(db, USER_VOTES_COLLECTION_PATH(userId));
             
+            // Note: Using getDocs initially to populate hasVoted map
             getDocs(q).then((snapshot) => {
                 hasVoted = {};
                 snapshot.forEach(doc => {
                     hasVoted[doc.id] = true; // doc.id is the worldId
                 });
+                // Rerender to ensure buttons reflect the loaded vote status
                 listenForWorlds(); 
             }).catch(error => {
                 console.error("Error loading user votes:", error);
@@ -224,7 +228,6 @@
         };
 
         const listenForWorlds = () => {
-            // ... (listenForWorlds Code) ...
             if (!db) return;
 
             const worldsRef = collection(db, PUBLIC_COLLECTION_PATH);
@@ -254,7 +257,6 @@
 
         // 3. UI Rendering (No changes)
         const renderWorlds = (worlds) => {
-            // ... (renderWorlds Code) ...
             const container = document.getElementById('worlds-container');
             container.innerHTML = ''; 
 
@@ -293,7 +295,6 @@
 
         // 4. Voting Logic (No changes)
         const handleVote = async (worldId, buttonElement) => {
-            // ... (handleVote Code) ...
             if (!db || !currentUserId) {
                 showModal('Error', 'Authentication not ready. Please wait a moment.');
                 return;
@@ -308,16 +309,19 @@
             buttonElement.textContent = 'Voting...';
 
             try {
+                // 1. Mark vote in user's private collection
                 const userVoteRef = doc(db, USER_VOTES_COLLECTION_PATH(currentUserId), worldId);
                 await setDoc(userVoteRef, {
                     voted_at: serverTimestamp()
                 }, { merge: true }); 
 
+                // 2. Increment vote count in the public world document
                 const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
                 await updateDoc(worldRef, {
                     votes: increment(1)
                 });
 
+                // Update UI state
                 hasVoted[worldId] = true;
                 buttonElement.textContent = 'Voted';
                 buttonElement.classList.remove('vote-button');
@@ -342,7 +346,7 @@
             }
         };
 
-        // 5. World Submission Logic (Modified for new modal and admin separation)
+        // 5. World Submission Logic (No changes)
         const suggestWorld = async (name, creator, image_url) => {
             const suggestionRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
             await addDoc(suggestionRef, {
@@ -411,7 +415,7 @@
             }
         });
 
-        // 6. Admin Review Logic (NEW)
+        // 6. Admin Review Logic (No changes)
 
         const listenForSuggestions = () => {
             if (!db || !isAdmin) return;
@@ -496,6 +500,7 @@
 
             try {
                 const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
+                // Instead of deleting, update status to 'declined' for audit trail
                 await updateDoc(suggestionRef, {
                     status: 'declined',
                     declined_by: currentUserId,
@@ -565,8 +570,24 @@
         };
 
         // Global Modal function now handles specific IDs
-        window.showModal = (id) => {
-            const modal = document.getElementById(id);
+        window.showModal = (idOrTitle, body = null) => {
+            let modal;
+            let titleElement;
+            let bodyElement;
+
+            if (body === null) {
+                // If only one argument is provided, assume it's the ID of a custom modal (e.g., add-world-modal)
+                modal = document.getElementById(idOrTitle);
+            } else {
+                // If two arguments are provided, use the generic alert modal
+                modal = document.getElementById('modal-backdrop');
+                titleElement = document.getElementById('modal-title');
+                bodyElement = document.getElementById('modal-body');
+
+                titleElement.textContent = idOrTitle;
+                bodyElement.textContent = body;
+            }
+
             if (modal) {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
