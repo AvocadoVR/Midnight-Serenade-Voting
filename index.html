@@ -70,7 +70,7 @@
                 <button id="admin-panel-btn" onclick="openAdminModal('admin')" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
                     <i class="fas fa-tools mr-1"></i> Admin Panel
                 </button>
-                <button onclick="showResults()" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
+                <button id="view-results-btn" onclick="showResults()" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150 hidden">
                     <i class="fas fa-chart-bar mr-1"></i> View Results
                 </button>
             </div>
@@ -230,7 +230,7 @@ let currentUserId = null;
 let hasVoted = {};
 let currentWorldData = [];
 let isAdminLoggedIn = false;
-let isWorldsListenerActive = false; // Flag to prevent multiple listeners
+let isWorldsListenerActive = false;
 const APP_ROOT_DOCUMENT = `artifacts/${appId}`;
 const PUBLIC_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/public/data/vrchat_worlds`;
 const USER_VOTES_COLLECTION_PATH = (uid) => `${APP_ROOT_DOCUMENT}/users/${uid}/vrchat_user_votes`;
@@ -288,11 +288,15 @@ const initFirebase = async () => {
 // --- ADMIN LOGIN & UI HELPER ---
 const setAdminUI = (isAdmin) => {
     const userIdDisplay = document.getElementById('user-id-display');
+    const resultsBtn = document.getElementById('view-results-btn');
+
     if (isAdmin) {
         userIdDisplay.classList.add('bg-red-800/50', 'p-1', 'rounded');
         document.getElementById('admin-panel-btn').classList.remove('hidden');
+        resultsBtn.classList.remove('hidden'); // Show results button (Request 1)
     } else {
         userIdDisplay.classList.remove('bg-red-800/50', 'p-1', 'rounded');
+        resultsBtn.classList.add('hidden'); // Hide results button (Request 1)
     }
 };
 
@@ -305,7 +309,7 @@ const adminLogin = (password) => {
         document.getElementById('admin-sections').classList.remove('hidden');
         listenForSuggestions();
         renderAdminWorldList();
-        renderWorlds(currentWorldData); // Re-render to show vote counts
+        renderWorlds(currentWorldData); 
         showModal('Success', 'Admin access granted!');
         openAdminModal('admin');
     } else {
@@ -368,13 +372,13 @@ const renderWorlds = (worlds) => {
         const buttonText = isVoted ? 'Voted' : (canVote ? 'Vote Now' : 'Auth Required');
         const buttonClass = isVoted ? 'voted-button' : (canVote ? 'vote-button' : 'bg-gray-500 cursor-not-allowed');
 
-        // Logic to hide votes for non-admins
-        const voteDisplay = isAdminLoggedIn 
+        // Logic to hide votes completely for non-admins (Request 3)
+        const voteDisplayHtml = isAdminLoggedIn 
             ? `<div class="flex items-center">
                 <i class="fas fa-heart text-red-500 mr-2 text-xl"></i>
                 <span class="text-3xl font-extrabold text-green-400">${world.votes || 0}</span>
                </div>`
-            : `<div class="text-gray-400 text-sm">Votes hidden (Admin only)</div>`;
+            : '';
 
         card.innerHTML = `
             <div class="h-40 overflow-hidden">
@@ -384,7 +388,7 @@ const renderWorlds = (worlds) => {
                 <h3 class="text-2xl font-bold text-white mb-1">${world.name}</h3>
                 <p class="text-violet-300 text-sm mb-4">By: ${world.creator}</p>
                 <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-600">
-                    ${voteDisplay}
+                    ${voteDisplayHtml}
                     <button id="vote-${world.id}" class="text-white font-semibold py-2 px-4 rounded-full text-sm flex items-center ${buttonClass}" ${buttonDisabled ? 'disabled' : ''}>
                         <i class="fas ${isVoted ? 'fa-check' : 'fa-thumbs-up'} mr-2"></i> ${buttonText}
                     </button>
@@ -570,7 +574,6 @@ const renderSuggestions = (suggestions)=>{
         return;
     } 
     list.innerHTML = suggestions.map(s=> {
-        // Simple sanitization for string literals in JS function calls
         const safeName = s.name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
         const safeCreator = s.creator.replace(/'/g,"\\'").replace(/"/g,'&quot;');
         const safeImageUrl = (s.image_url || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World').replace(/'/g,"\\'").replace(/"/g,'&quot;');
@@ -643,7 +646,6 @@ document.getElementById('edit-world-form').addEventListener('submit', async (e)=
             votes: votes
         });
         messageEl.textContent = `World "${name}" updated successfully!`;
-        // Since we are listening to worlds, it will re-render automatically.
         setTimeout(hideEditWorldModal, 1500); 
     } catch(error) {
         console.error("Error updating world:", error);
