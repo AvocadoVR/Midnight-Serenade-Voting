@@ -245,7 +245,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, deleteDoc, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- CONFIGURATION ---
 const appId = 'vrchat-worlds-voting-app';
@@ -260,8 +260,8 @@ const firebaseConfig = {
 };
 
 // ⚠️ WARNING: Hardcoding the admin password here is a MAJOR security vulnerability.
-// THIS SHOULD BE HANDLED BY FIREBASE SECURITY RULES AND A BACKEND FUNCTION.
-const ADMIN_PASSWORD = 'vrcadmin123'; 
+// THIS SOLUTION IS NOT SECURE as the client code can be inspected.
+// const ADMIN_PASSWORD = 'vrcadmin123'; // <<< REMOVED
 let app, db, auth;
 let currentUserId = null;
 let hasVoted = {};
@@ -269,10 +269,12 @@ let currentWorldData = [];
 let isAdminLoggedIn = false;
 let isWorldsListenerActive = false;
 let isVotingEnabled = true; // State variable for voting
+let storedAdminPassword = null; // NEW: Variable to hold the password fetched from Firestore
 
 const APP_ROOT_DOCUMENT = `artifacts/${appId}`;
 const PUBLIC_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/public/data/vrchat_worlds`;
 const CONFIG_DOCUMENT_PATH = `${APP_ROOT_DOCUMENT}/public/config/settings`;
+const ADMIN_PASSWORD_PATH = `admin_config/secret_password`; // NEW: Path to the admin password document
 const USER_VOTES_COLLECTION_PATH = (uid) => `${APP_ROOT_DOCUMENT}/users/${uid}/vrchat_user_votes`;
 const SUGGESTIONS_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/admin/data/suggestions`;
 
@@ -290,6 +292,9 @@ const initFirebase = async () => {
         auth = getAuth(app);
         await setPersistence(auth, browserSessionPersistence);
         await signInAnonymously(auth);
+
+        // NEW: Load the admin password from Firestore
+        await loadAdminPassword();
 
         // Start listening for config changes immediately
         listenForConfig(); 
@@ -325,6 +330,23 @@ const initFirebase = async () => {
     } catch (error) {
         console.error("Firebase initialization failed:", error);
         showModal('Initialization Error', 'Could not connect to Firebase. Check console for details.');
+    }
+};
+
+// --- LOAD ADMIN PASSWORD (NEW) ---
+const loadAdminPassword = async () => {
+    if (!db) return;
+    try {
+        const passwordRef = doc(db, ADMIN_PASSWORD_PATH);
+        const docSnap = await getDoc(passwordRef);
+        if (docSnap.exists() && docSnap.data().password) {
+            storedAdminPassword = docSnap.data().password;
+            console.log("Admin password loaded from DB.");
+        } else {
+            console.error("Admin password document not found or missing 'password' field at:", ADMIN_PASSWORD_PATH);
+        }
+    } catch(error) {
+        console.error("Error loading admin password:", error);
     }
 };
 
@@ -377,7 +399,7 @@ const updateToggleVotingButton = () => {
 };
 
 const adminLogin = (password) => {
-    if (password === ADMIN_PASSWORD) {
+    if (password === storedAdminPassword) { // MODIFIED: Check against the loaded password
         isAdminLoggedIn = true;
         localStorage.setItem('isAdmin', 'true');
         setAdminUI(true);
@@ -560,7 +582,7 @@ window.resetVotes = async () => {
             // but deletes the votes under the currently known user paths. A proper backend function
             // is needed to delete ALL subcollections across ALL users efficiently and securely).
             const usersRef = collection(db, `${APP_ROOT_DOCUMENT}/users`);
-            const usersSnapshot = await transaction.get(usersRef);
+            const usersSnapshot = await getDocs(usersRef); // Use getDocs outside of transaction to fetch users
             usersSnapshot.docs.forEach(userDoc => {
                 // This logic needs a proper backend function to delete the subcollection itself
                 // For simplicity in this front-end code, we'll skip the deletion of user votes 
