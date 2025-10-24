@@ -62,12 +62,14 @@
                 Current User ID: <span id="user-id-display" class="font-mono text-xs text-yellow-300">Loading...</span>
             </p>
             <div class="space-x-2">
+                
                 <button onclick="openAdminModal('suggest')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
                     <i class="fas fa-plus mr-1"></i> Suggest World
                 </button>
-<button onclick="openAdminModal('admin')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
-    <i class="fas fa-plus mr-1"></i> Suggest World
-</button>
+                
+                <button id="admin-panel-btn" onclick="openAdminModal('admin')" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150 hidden">
+                    <i class="fas fa-tools mr-1"></i> Admin Panel
+                </button>
             </div>
         </div>
 
@@ -175,9 +177,13 @@
         let currentWorldData = []; // To store world data for Admin panel management
         let isAdminLoggedIn = false; // NEW: Admin state controlled by password login
 
-        const PUBLIC_COLLECTION_PATH = `artifacts/${appId}/public/data/vrchat_worlds`;
-        const USER_VOTES_COLLECTION_PATH = (uid) => `artifacts/${appId}/users/${uid}/vrchat_user_votes`;
-        const SUGGESTIONS_COLLECTION_PATH = `artifacts/${appId}/admin/suggestions`; 
+        // 🚨 FIX 2: Correct Firestore Collection Paths (Must have an odd number of segments) 🚨
+        const APP_ROOT_DOCUMENT = `artifacts/${appId}`; // e.g., artifacts/vrchat-worlds-voting-app (Document ID)
+
+        const PUBLIC_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/public/data/vrchat_worlds`; // 5 segments
+        const USER_VOTES_COLLECTION_PATH = (uid) => `${APP_ROOT_DOCUMENT}/users/${uid}/vrchat_user_votes`; // 7 segments
+        const SUGGESTIONS_COLLECTION_PATH = `${APP_ROOT_DOCUMENT}/admin/suggestions`; // 5 segments
+
 
         // 1. Initialization and Authentication
         const initFirebase = async () => {
@@ -229,6 +235,10 @@
                 renderAdminWorldList(); // Render current worlds for management
                 showModal('Success', 'Admin access granted!');
                 console.log("Admin privileges enabled.");
+
+                // Automatically switch to the Admin Panel view after successful login
+                window.openAdminModal('admin');
+
             } else {
                 isAdminLoggedIn = false;
                 document.getElementById('admin-login-message').textContent = 'Incorrect Password.';
@@ -400,27 +410,39 @@
         const adminLoginSection = document.getElementById('admin-login-section');
         const adminToolsSection = document.getElementById('admin-sections');
 
+        // 🚨 FIX 1: Corrected modal logic for clear separation 🚨
         window.openAdminModal = (mode) => {
-            document.getElementById('modal-heading').textContent = (mode === 'admin') ? 'Admin & World Management' : 'Suggest a VRChat World';
+            // 1. Reset Visibility
+            suggestSection.classList.add('hidden');
+            adminAccessArea.classList.add('hidden');
+            adminLoginSection.classList.add('hidden');
+            adminToolsSection.classList.add('hidden');
 
-            // Always show the Suggest section
-            suggestSection.classList.remove('hidden');
+            // 2. Set Heading
+            document.getElementById('modal-heading').textContent = (mode === 'admin') 
+                ? 'Admin & World Management' 
+                : 'Suggest a VRChat World';
 
-            if (mode === 'admin') {
-                adminAccessArea.classList.remove('hidden');
+            // 3. Logic based on mode
+            if (mode === 'suggest') {
+                // Show ONLY the Suggestion form for regular users
+                suggestSection.classList.remove('hidden');
+
+            } else if (mode === 'admin') {
+                adminAccessArea.classList.remove('hidden'); // Parent container
 
                 if (isAdminLoggedIn) {
-                    adminLoginSection.classList.add('hidden');
+                    // Logged in: Show Admin Tools, hide login form, hide suggestion form.
                     adminToolsSection.classList.remove('hidden');
-                    // Refresh data for admin view
-                    renderAdminWorldList();
                     listenForSuggestions();
+                    renderAdminWorldList();
                 } else {
+                    // Not logged in: Show Login Form. 
                     adminLoginSection.classList.remove('hidden');
-                    adminToolsSection.classList.add('hidden');
+                    
+                    // Also show suggestion form below the login prompt so the modal is useful.
+                    suggestSection.classList.remove('hidden');
                 }
-            } else {
-                adminAccessArea.classList.add('hidden'); // Hide admin specific sections in 'suggest' mode
             }
 
             adminModalBackdrop.classList.add('open');
