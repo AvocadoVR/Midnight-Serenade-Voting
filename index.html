@@ -1,517 +1,654 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VRChat World Voting Dashboard (Dynamic - Firebase Ready)</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://kit.fontawesome.com/a7c5c29267.js" crossorigin="anonymous"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        /* Custom Variables */
-        :root {
-            --primary-color: #7C3AED; /* Violet 600 */
-            --primary-dark: #6D28D9; /* Violet 700 */
-            --bg-color: #1F2937; /* Gray 800 */
-            --card-color: #374151; /* Gray 700 */
-        }
-        /* Base Styling */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: #E5E7EB; /* Gray 200 */
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            width: 100%;
-        }
-        /* Button Styles */
-        .vote-button {
-            transition: all 0.15s ease-in-out;
-            background-color: var(--primary-color);
-        }
-        .vote-button:hover:not(:disabled) {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-        .voted-button {
-            background-color: #10B981; /* Emerald 500 */
-        }
-        .voted-button:hover {
-            background-color: #059669; /* Emerald 600 */
-        }
-        /* Admin Panel Border */
-        .admin-section {
-            background-color: #111827; /* Gray 900 */
-            border-left: 5px solid var(--primary-color);
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRChat World Vote</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #1f2937; /* Dark Gray Background */
+            color: #e5e7eb; /* Light Gray Text */
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .vote-button {
+            background-color: #6d28d9; /* Violet-700 */
+        }
+        .vote-button:hover {
+            background-color: #5b21b6; /* Violet-800 */
+        }
+        .voted-button {
+            background-color: #10b981; /* Emerald-500 */
+            cursor: default;
+        }
+        .voted-button:hover {
+            background-color: #10b981;
+        }
+        /* Style for the backdrop to allow flex alignment */
+        #admin-modal-backdrop {
+            display: none; /* Controlled by JS */
+        }
+        #admin-modal-backdrop.open {
+            display: flex;
+        }
+        /* Custom scrollbar for the modal content */
+        #admin-modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        #admin-modal-content::-webkit-scrollbar-thumb {
+            background-color: #a78bfa; /* Violet-400 */
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="container">
-                <header class="text-center mb-8 p-4 rounded-xl shadow-lg bg-gray-700/50">
-            <h1 class="text-4xl font-extrabold text-white mb-2">VRChat World Vote</h1>
-            <p class="text-violet-300">Vote for which games you want to play!!</p>
-        </header>
+    <div class="container">
+        <header class="text-center mb-8 p-4 rounded-xl shadow-lg bg-gray-700/50">
+            <h1 class="text-4xl font-extrabold text-white mb-2">VRChat World Vote</h1>
+            <p class="text-violet-300">Vote for which games you want to play!!</p>
+        </header>
 
-                <div id="auth-status" class="mb-6 p-3 bg-gray-700 rounded-lg shadow-md flex justify-between items-center text-sm">
-            <p class="text-gray-300">
-                <i class="fas fa-user-circle mr-2 text-violet-400"></i>
-                Current User ID: <span id="user-id-display" class="font-mono text-xs text-yellow-300">Loading...</span>
-            </p>
-            <div class="space-x-2">
-                                <button onclick="openAdminModal('suggest')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
-                    <i class="fas fa-plus mr-1"></i> Suggest World
-                </button>
-                                <button id="admin-panel-btn" onclick="openAdminModal('admin')" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150 hidden">
-                    <i class="fas fa-tools mr-1"></i> Admin Panel
-                </button>
-            </div>
-        </div>
+        <div id="auth-status" class="mb-6 p-3 bg-gray-700 rounded-lg shadow-md flex justify-between items-center text-sm">
+            <p class="text-gray-300">
+                <i class="fas fa-user-circle mr-2 text-violet-400"></i>
+                Current User ID: <span id="user-id-display" class="font-mono text-xs text-yellow-300">Loading...</span>
+            </p>
+            <div class="space-x-2">
+                <button onclick="openAdminModal('suggest')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150">
+                    <i class="fas fa-plus mr-1"></i> Suggest World
+                </button>
+                <button id="admin-panel-btn" onclick="openAdminModal('admin')" class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-1 px-3 rounded-full transition duration-150 hidden">
+                    <i class="fas fa-tools mr-1"></i> Admin Panel
+                </button>
+            </div>
+        </div>
 
-                <main id="worlds-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
+        <main id="worlds-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
 
-                <div id="message-area" class="text-center text-lg mt-10 text-gray-400 hidden">Loading worlds...</div>
+        <div id="message-area" class="text-center text-lg mt-10 text-gray-400 hidden">Loading worlds...</div>
 
-                <div id="admin-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-            <div id="admin-modal-content" class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-4xl w-full border-t-4 border-violet-500 max-h-screen overflow-y-auto m-4">
-                <h2 id="modal-heading" class="text-3xl font-bold text-violet-400 mb-6"></h2>
-                
-                                <section id="suggest-world-section" class="space-y-4">
-                    <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4">Suggest a New World</h3>
-                    <form id="suggest-world-form" class="space-y-4">
-                        <div>
-                            <label for="suggest-name" class="block text-sm font-medium text-gray-300">World Name</label>
-                            <input type="text" id="suggest-name" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="suggest-creator" class="block text-sm font-medium text-gray-300">Creator Name</label>
-                            <input type="text" id="suggest-creator" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="suggest-image" class="block text-sm font-medium text-gray-300">Image URL (Optional)</label>
-                            <input type="url" id="suggest-image" value="https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World" class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
-                            <i class="fas fa-upload mr-2"></i> Submit Suggestion
-                        </button>
-                    </form>
-                    <div id="suggest-message" class="mt-4 text-sm text-green-400 hidden"></div>
-                </section>
+        <div id="admin-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+            <div id="admin-modal-content" class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-4xl w-full border-t-4 border-violet-500 max-h-screen overflow-y-auto m-4">
+                <h2 id="modal-heading" class="text-3xl font-bold text-violet-400 mb-6"></h2>
+                
+                <section id="suggest-world-section" class="space-y-4">
+                    <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4">Suggest a New World</h3>
+                    <form id="suggest-world-form" class="space-y-4">
+                        <div>
+                            <label for="suggest-name" class="block text-sm font-medium text-gray-300">World Name</label>
+                            <input type="text" id="suggest-name" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="suggest-creator" class="block text-sm font-medium text-gray-300">Creator Name</label>
+                            <input type="text" id="suggest-creator" required class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="suggest-image" class="block text-sm font-medium text-gray-300">Image URL (Optional)</label>
+                            <input type="url" id="suggest-image" value="https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World" class="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                            <i class="fas fa-upload mr-2"></i> Submit Suggestion
+                        </button>
+                    </form>
+                    <div id="suggest-message" class="mt-4 text-sm text-green-400 hidden"></div>
+                </section>
 
-                                <div id="admin-sections" class="mt-8 border-t border-gray-700 pt-6 space-y-8 hidden">
-                    
-                                        <section>
-                        <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4"><i class="fas fa-globe mr-2 text-violet-400"></i> Manage Current Worlds</h3>
-                        <div id="admin-world-list" class="space-y-3">
-                                                        <p class="text-gray-400">Loading worlds for management...</p>
-                        </div>
-                    </section>
-                    
-                                        <section>
-                        <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4"><i class="fas fa-inbox mr-2 text-orange-400"></i> Review Suggestions</h3>
-                        <div id="suggestions-list" class="space-y-3">
-                                                        <p class="text-gray-400">Loading suggestions...</p>
-                        </div>
-                    </section>
-                </div>
+                <div id="admin-access-area" class="mt-8 border-t border-gray-700 pt-6 space-y-8">
+                    <section id="admin-login-section">
+                        <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4"><i class="fas fa-key mr-2 text-red-400"></i> Admin Access</h3>
+                        <form id="admin-login-form" class="flex space-x-2">
+                            <input type="password" id="admin-password" placeholder="Enter Admin Password" required class="flex-grow rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-violet-500 focus:border-violet-500">
+                            <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded-lg">Login</button>
+                        </form>
+                        <p id="admin-login-message" class="mt-2 text-sm text-red-400 hidden"></p>
+                    </section>
+                    
+                    <div id="admin-sections" class="space-y-8 hidden">
+                        
+                        <section>
+                            <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4"><i class="fas fa-globe mr-2 text-violet-400"></i> Manage Current Worlds (Edit/Delete)</h3>
+                            <div id="admin-world-list" class="space-y-3">
+                                <p class="text-gray-400">Loading worlds for management...</p>
+                            </div>
+                        </section>
+                        
+                        <section>
+                            <h3 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4"><i class="fas fa-inbox mr-2 text-orange-400"></i> Review Pending Suggestions</h3>
+                            <div id="suggestions-list" class="space-y-3">
+                                <p class="text-gray-400">Loading suggestions...</p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
 
-                <button onclick="hideAdminModal()" class="w-full mt-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg">
-                    Close Panel
-                </button>
-            </div>
-        </div>
-
-
-                <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-            <div id="modal-content" class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-violet-500">
-                <h3 id="modal-title" class="text-xl font-bold text-white mb-3"></h3>
-                <p id="modal-body" class="text-gray-300 mb-4"></p>
-                <button onclick="hideModal()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 rounded-lg">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-        <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- IMPORTANT: HARDCODED CONFIG FOR STATIC HOSTING ---
-        // ⚠️ REPLACE THESE PLACEHOLDERS WITH YOUR OWN FIREBASE PROJECT CONFIG! ⚠️
-        const appId = 'vrchat-worlds-voting-app'; // Used for the Firestore path
-        const firebaseConfig = {
-            apiKey: "AIzaSyCQQjVBo9co8w0GzGGzbw_tG7s51y34A6I",
-            authDomain: "midnight-voting-3b1bb.firebaseapp.com",
-            projectId: "midnight-voting-3b1bb",
-            storageBucket: "midnight-voting-3b1bb.firebasestorage.app",
-            messagingSenderId: "268153243141",
-            appId: "1:268153243141:web:717d164de36083c4707e6c",
-            measurementId: "G-RXQ25RHNT1"
-        };
-        // ⚠️ IMPORTANT: LIST OF ADMIN UIDs MUST MATCH FIREBASE SECURITY RULES ⚠️
-        const ADMIN_UIDS = ['ADMIN_UID_1', 'ADMIN_UID_2', 'ADMIN_UID_3']; // Replace with actual UIDs
-        // ----------------------------------------------------
-
-        let app;
-        let db;
-        let auth;
-        let currentUserId = null;
-        let hasVoted = {}; // Local state to track which worlds the current user has voted for
-
-        const PUBLIC_COLLECTION_PATH = `artifacts/${appId}/public/data/vrchat_worlds`;
-        const USER_VOTES_COLLECTION_PATH = (uid) => `artifacts/${appId}/users/${uid}/vrchat_user_votes`;
-        const SUGGESTIONS_COLLECTION_PATH = `artifacts/${appId}/admin/suggestions`; // New collection path
-
-        // Helper to check admin status client-side (for UI rendering)
-        const isAdminClientSide = () => ADMIN_UIDS.includes(currentUserId);
+                <button onclick="hideAdminModal()" class="w-full mt-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg">
+                    Close Panel
+                </button>
+            </div>
+        </div>
 
 
-        // 1. Initialization and Authentication
-        const initFirebase = async () => {
-            // ... (omitted same initialization logic for brevity)
-            if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID_HERE") {
-                console.error("Firebase config is missing. Please replace placeholders with your actual keys.");
-                document.getElementById('message-area').textContent = "ERROR: Firebase config missing. Please update script with your project keys.";
-                document.getElementById('message-area').classList.remove('hidden');
-                return;
-            }
+        <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+            <div id="modal-content" class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-violet-500">
+                <h3 id="modal-title" class="text-xl font-bold text-white mb-3"></h3>
+                <p id="modal-body" class="text-gray-300 mb-4"></p>
+                <button onclick="hideModal()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, query, updateDoc, increment, setDoc, addDoc, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-                await setPersistence(auth, browserSessionPersistence);
-                await signInAnonymously(auth);
+        // --- IMPORTANT: CONFIGURATION ---
+        const appId = 'vrchat-worlds-voting-app'; // Used for the Firestore path
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQQjVBo9co8w0GzGGzbw_tG7s51y34A6I",
+            authDomain: "midnight-voting-3b1bb.firebaseapp.com",
+            projectId: "midnight-voting-3b1bb",
+            storageBucket: "midnight-voting-3b1bb.firebasestorage.app",
+            messagingSenderId: "268153243141",
+            appId: "1:268153243141:web:717d164de36083c4707e6c",
+            measurementId: "G-RXQ25RHNT1"
+        };
+        // ⚠️ IMPORTANT: Change this default password! ⚠️
+        const ADMIN_PASSWORD = 'vrcadmin123';
+        // ----------------------------------------------------
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUserId = user.uid;
-                        document.getElementById('user-id-display').textContent = currentUserId;
-                        // Show Admin Button if user is admin
-                        if (isAdminClientSide()) {
-                            document.getElementById('admin-panel-btn').classList.remove('hidden');
-                            document.getElementById('user-id-display').classList.add('bg-red-800/50', 'p-1', 'rounded');
-                        }
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let hasVoted = {}; // Local state to track user votes
+        let currentWorldData = []; // To store world data for Admin panel management
+        let isAdminLoggedIn = false; // NEW: Admin state controlled by password login
 
-                        loadUserVotes(currentUserId);
-                        listenForWorlds();
-                    } else {
-                        // Fallback logic (omitted for brevity)
-                        currentUserId = 'anonymous-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
-                        document.getElementById('user-id-display').textContent = currentUserId + " (Anonymous Fallback)";
-                        listenForWorlds();
-                    }
-                });
+        const PUBLIC_COLLECTION_PATH = `artifacts/${appId}/public/data/vrchat_worlds`;
+        const USER_VOTES_COLLECTION_PATH = (uid) => `artifacts/${appId}/users/${uid}/vrchat_user_votes`;
+        const SUGGESTIONS_COLLECTION_PATH = `artifacts/${appId}/admin/suggestions`; 
 
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                showModal('Initialization Error', `Could not connect to Firebase. Check console for details.`);
-                document.getElementById('message-area').textContent = `Initialization Error: ${error.message}`;
-                document.getElementById('message-area').classList.remove('hidden');
-            }
-        };
+        // 1. Initialization and Authentication
+        const initFirebase = async () => {
+            if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID_HERE") {
+                console.error("Firebase config is missing.");
+                document.getElementById('message-area').textContent = "ERROR: Firebase config missing.";
+                document.getElementById('message-area').classList.remove('hidden');
+                return;
+            }
 
-        // 2. Data Retrieval and Real-time Listening (Worlds - unchanged)
-        const loadUserVotes = (userId) => { /* ... existing loadUserVotes ... */ };
-        const listenForWorlds = () => { /* ... existing listenForWorlds ... */ };
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-        // 3. UI Rendering (Worlds - updated to include Edit/Delete for Admin)
-        let currentWorldData = []; // Store current worlds for Admin Panel
-        const renderWorlds = (worlds) => {
-            currentWorldData = worlds; // Store the data
-            const container = document.getElementById('worlds-container');
-            container.innerHTML = ''; 
+                await setPersistence(auth, browserSessionPersistence);
+                await signInAnonymously(auth);
 
-            worlds.forEach(world => {
-                const isVoted = hasVoted[world.id];
-                const card = document.createElement('div');
-                card.className = 'bg-gray-700 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] flex flex-col';
-                
-                card.innerHTML = `
-                    <div class="h-40 overflow-hidden">
-                        <img src="${world.image_url}" onerror="this.onerror=null; this.src='https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';" alt="${world.name}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="p-5 flex flex-col flex-grow">
-                        <h3 class="text-2xl font-bold text-white mb-1">${world.name}</h3>
-                        <p class="text-violet-300 text-sm mb-4">By: ${world.creator}</p>
-                        <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-600">
-                            <div class="flex items-center">
-                                <i class="fas fa-heart text-red-500 mr-2 text-xl"></i>
-                                <span class="text-3xl font-extrabold text-green-400">${world.votes || 0}</span>
-                            </div>
-                            <button id="vote-${world.id}" class="vote-button text-white font-semibold py-2 px-4 rounded-full text-sm flex items-center ${isVoted ? 'voted-button' : ''}" data-world-id="${world.id}" ${isVoted ? 'disabled' : ''}>
-                                <i class="fas ${isVoted ? 'fa-check' : 'fa-thumbs-up'} mr-2"></i>
-                                ${isVoted ? 'Voted' : 'Vote Now'}
-                            </button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-                
-                // Attach event listener to the button
-                const button = card.querySelector(`#vote-${world.id}`);
-                if (button) {
-                    button.addEventListener('click', () => handleVote(world.id, button));
-                }
-            });
-        };
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        document.getElementById('user-id-display').textContent = currentUserId;
+                        loadUserVotes(currentUserId);
+                        listenForWorlds();
+                    } else {
+                        currentUserId = 'anonymous-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
+                        document.getElementById('user-id-display').textContent = currentUserId + " (Anonymous Fallback)";
+                        listenForWorlds();
+                    }
+                });
 
-        // 4. Voting Logic (unchanged)
-        const handleVote = async (worldId, buttonElement) => { /* ... existing handleVote ... */ };
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                showModal('Initialization Error', `Could not connect to Firebase. Check console for details.`);
+            }
+        };
 
+        // 2. Admin Password Login Logic
+        const adminLogin = (password) => {
+            if (password === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                localStorage.setItem('isAdmin', 'true'); // Persist login state
+                document.getElementById('admin-login-section').classList.add('hidden');
+                document.getElementById('admin-sections').classList.remove('hidden');
+                document.getElementById('admin-panel-btn').classList.remove('hidden');
+                document.getElementById('user-id-display').classList.add('bg-red-800/50', 'p-1', 'rounded');
+                document.getElementById('admin-login-message').classList.add('hidden');
+                listenForSuggestions(); // Start listening for suggestions
+                renderAdminWorldList(); // Render current worlds for management
+                showModal('Success', 'Admin access granted!');
+                console.log("Admin privileges enabled.");
+            } else {
+                isAdminLoggedIn = false;
+                document.getElementById('admin-login-message').textContent = 'Incorrect Password.';
+                document.getElementById('admin-login-message').classList.remove('hidden');
+            }
+        };
 
-        // --- 5. NEW: Suggest World Logic ---
-        const submitSuggestion = async (name, creator, image_url) => {
-            if (!db || !currentUserId) return false;
-            try {
-                const suggestionsRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
-                await addDoc(suggestionsRef, {
-                    name: name,
-                    creator: creator,
-                    image_url: image_url,
-                    suggested_by: currentUserId,
-                    status: 'pending',
-                    created_at: serverTimestamp(),
-                });
-                return true;
-            } catch (error) {
-                console.error("Error submitting suggestion:", error);
-                return false;
-            }
-        };
+        // Check for persisted admin state on load
+        if (localStorage.getItem('isAdmin') === 'true') {
+            isAdminLoggedIn = true;
+            document.getElementById('admin-panel-btn').classList.remove('hidden');
+        }
 
-        const suggestForm = document.getElementById('suggest-world-form');
-        suggestForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('suggest-name').value.trim();
-            const creator = document.getElementById('suggest-creator').value.trim();
-            const image_url = document.getElementById('suggest-image').value.trim() || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
+        const adminLoginForm = document.getElementById('admin-login-form');
+        adminLoginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('admin-password').value;
+            adminLogin(password);
+            document.getElementById('admin-password').value = ''; // Clear password field
+        });
 
-            const messageArea = document.getElementById('suggest-message');
-            messageArea.classList.remove('hidden', 'text-red-400');
-            messageArea.classList.add('text-green-400');
-            messageArea.textContent = 'Submitting suggestion...';
+        // 3. Data Retrieval and Real-time Listening
+        const loadUserVotes = (userId) => {
+            if (!db || !userId) return;
+            const q = collection(db, USER_VOTES_COLLECTION_PATH(userId));
+            
+            getDocs(q).then((snapshot) => {
+                hasVoted = {};
+                snapshot.forEach(doc => {
+                    hasVoted[doc.id] = true; 
+                });
+                // Re-render to update vote buttons based on loaded state
+                renderWorlds(currentWorldData);
+            }).catch(error => {
+                console.error("Error loading user votes:", error);
+            });
+        };
 
-            if (await submitSuggestion(name, creator, image_url)) {
-                messageArea.textContent = `World "${name}" suggested successfully! An admin will review it.`;
-                suggestForm.reset();
-                document.getElementById('suggest-image').value = 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
-                setTimeout(() => messageArea.classList.add('hidden'), 3000);
-                hideAdminModal();
-            } else {
-                messageArea.textContent = 'Failed to submit suggestion.';
-                messageArea.classList.remove('text-green-400');
-                messageArea.classList.add('text-red-400');
-            }
-        });
+        const listenForWorlds = () => {
+            if (!db) return;
 
+            const worldsRef = collection(db, PUBLIC_COLLECTION_PATH);
+            const q = query(worldsRef);
 
-        // --- 6. NEW: Admin CRUD Logic ---
+            onSnapshot(q, (snapshot) => {
+                const worlds = [];
+                snapshot.forEach((doc) => {
+                    worlds.push({ id: doc.id, ...doc.data() });
+                });
 
-        // Add/Create World (renamed from old addWorld)
-        const addWorldToRoster = async (worldData) => {
-            if (!db || !isAdminClientSide()) {
-                showModal('Access Denied', 'You must be an admin to perform this action.');
-                return false;
-            }
-            try {
-                const newWorldRef = collection(db, PUBLIC_COLLECTION_PATH);
-                await addDoc(newWorldRef, {
-                    name: worldData.name,
-                    creator: worldData.creator,
-                    image_url: worldData.image_url || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World',
-                    votes: worldData.votes || 0,
-                    created_at: serverTimestamp(),
-                });
-                return true;
-            } catch (error) {
-                console.error("Error adding world:", error);
-                return false;
-            }
-        };
+                worlds.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+                currentWorldData = worlds; 
 
-        // Edit World
-        window.editWorld = async (worldId) => {
-            const world = currentWorldData.find(w => w.id === worldId);
-            if (!world) return showModal('Error', 'World data not found.');
+                renderWorlds(worlds);
+                if (isAdminLoggedIn) {
+                    renderAdminWorldList(); // Update admin list if modal is open
+                }
 
-            const newName = prompt(`Edit Name for ${world.name}:`, world.name);
-            if (!newName) return;
-            const newCreator = prompt(`Edit Creator for ${world.name}:`, world.creator);
-            if (!newCreator) return;
-            const newImage = prompt(`Edit Image URL for ${world.name}:`, world.image_url);
+                if (worlds.length === 0) {
+                    document.getElementById('message-area').textContent = "No worlds available yet. Use the Suggest World button!";
+                    document.getElementById('message-area').classList.remove('hidden');
+                } else {
+                    document.getElementById('message-area').classList.add('hidden');
+                }
+            });
+        };
 
-            try {
-                const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
-                await updateDoc(worldRef, {
-                    name: newName,
-                    creator: newCreator,
-                    image_url: newImage,
-                });
-                showModal('Success', `World "${newName}" updated!`);
-            } catch (error) {
-                console.error("Error editing world:", error);
-                showModal('Error', `Failed to update world. Check console for details.`);
-            }
-        };
+        // 4. UI Rendering (Main Dashboard)
+        const renderWorlds = (worlds) => {
+            const container = document.getElementById('worlds-container');
+            container.innerHTML = ''; 
 
-        // Delete World
-        window.deleteWorld = async (worldId, worldName) => {
-            if (!confirm(`Are you sure you want to permanently delete world "${worldName}"? This cannot be undone.`)) return;
+            worlds.forEach(world => {
+                const isVoted = hasVoted[world.id];
+                const card = document.createElement('div');
+                card.className = 'bg-gray-700 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] flex flex-col';
+                
+                card.innerHTML = `
+                    <div class="h-40 overflow-hidden">
+                        <img src="${world.image_url}" onerror="this.onerror=null; this.src='https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';" alt="${world.name}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <h3 class="text-2xl font-bold text-white mb-1">${world.name}</h3>
+                        <p class="text-violet-300 text-sm mb-4">By: ${world.creator}</p>
+                        <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-heart text-red-500 mr-2 text-xl"></i>
+                                <span class="text-3xl font-extrabold text-green-400">${world.votes || 0}</span>
+                            </div>
+                            <button id="vote-${world.id}" class="vote-button text-white font-semibold py-2 px-4 rounded-full text-sm flex items-center ${isVoted ? 'voted-button' : ''}" data-world-id="${world.id}" ${isVoted ? 'disabled' : ''}>
+                                <i class="fas ${isVoted ? 'fa-check' : 'fa-thumbs-up'} mr-2"></i>
+                                ${isVoted ? 'Voted' : 'Vote Now'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+                
+                const button = card.querySelector(`#vote-${world.id}`);
+                if (button) {
+                    // Check if event listener is already attached to prevent duplicates on re-render
+                    if (!button.listenerAttached) {
+                        button.addEventListener('click', () => handleVote(world.id, button));
+                        button.listenerAttached = true;
+                    }
+                }
+            });
+        };
 
-            try {
-                const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
-                await deleteDoc(worldRef);
-                showModal('Success', `World "${worldName}" deleted!`);
-            } catch (error) {
-                console.error("Error deleting world:", error);
-                showModal('Error', `Failed to delete world. Check console for details.`);
-            }
-        };
+        // 5. Voting Logic (Unchanged)
+        const handleVote = async (worldId, buttonElement) => {
+            if (!db || !currentUserId) {
+                showModal('Error', 'Authentication not ready. Please wait a moment.');
+                return;
+            }
 
+            if (hasVoted[worldId]) {
+                showModal('Info', `You have already voted for this world. Your vote is locked.`);
+                return;
+            }
 
-        // --- 7. NEW: Suggestion Review Logic (Admin Only) ---
+            buttonElement.disabled = true;
+            buttonElement.textContent = 'Voting...';
 
-        // Approve Suggestion
-        window.approveSuggestion = async (suggestionId, worldName, worldCreator, imageUrl) => {
-            // 1. Add the suggested world to the main roster
-            const success = await addWorldToRoster({ name: worldName, creator: worldCreator, image_url: imageUrl, votes: 0 });
+            try {
+                // 1. Record the user's vote status for this world
+                const userVoteRef = doc(db, USER_VOTES_COLLECTION_PATH(currentUserId), worldId);
+                await setDoc(userVoteRef, {
+                    voted_at: serverTimestamp()
+                }, { merge: true }); 
 
-            if (success) {
-                // 2. Update the suggestion status
-                const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
-                await updateDoc(suggestionRef, { status: 'approved', approved_at: serverTimestamp(), approved_by: currentUserId });
-                showModal('Approved', `World "${worldName}" has been added to the main roster.`);
-            } else {
-                showModal('Error', `Failed to add world to roster. Check console/security rules.`);
-            }
-        };
+                // 2. Update the world's total vote count
+                const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
+                await updateDoc(worldRef, {
+                    votes: increment(1)
+                });
 
-        // Decline Suggestion
-        window.declineSuggestion = async (suggestionId, worldName) => {
-            if (!confirm(`Are you sure you want to decline and delete the suggestion for "${worldName}"?`)) return;
+                // 3. Update local state and UI immediately
+                hasVoted[worldId] = true;
+                buttonElement.textContent = 'Voted';
+                buttonElement.classList.remove('vote-button');
+                buttonElement.classList.add('voted-button');
+                buttonElement.querySelector('i').className = 'fas fa-check mr-2';
 
-            try {
-                const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
-                await deleteDoc(suggestionRef);
-                showModal('Declined', `Suggestion for "${worldName}" has been declined and removed.`);
-            } catch (error) {
-                console.error("Error declining suggestion:", error);
-                showModal('Error', `Failed to decline suggestion. Check console.`);
-            }
-        };
-
-        // Render Admin World List
-        const renderAdminWorldList = () => {
-            const list = document.getElementById('admin-world-list');
-            list.innerHTML = currentWorldData.map(world => `
-                <div class="p-3 bg-gray-700 rounded-lg flex justify-between items-center">
-                    <span class="text-sm font-medium text-white">${world.name} (Votes: ${world.votes || 0})</span>
-                    <div class="space-x-2">
-                        <button onclick="editWorld('${world.id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white p-1 rounded-md text-xs"><i class="fas fa-edit"></i> Edit</button>
-                        <button onclick="deleteWorld('${world.id}', '${world.name}')" class="bg-red-600 hover:bg-red-700 text-white p-1 rounded-md text-xs"><i class="fas fa-trash"></i> Delete</button>
-                    </div>
-                </div>
-            `).join('');
-            if (currentWorldData.length === 0) {
-                list.innerHTML = '<p class="text-gray-400">No worlds in the main roster to manage.</p>';
-            }
-        };
-
-        // Listen for Pending Suggestions
-        const listenForSuggestions = () => {
-            if (!db || !isAdminClientSide()) return;
-            const suggestionsRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
-            // Add a filter to only listen for 'pending' if you had an index
-            // const q = query(suggestionsRef, where("status", "==", "pending"));
-            const q = query(suggestionsRef); // Read all for simplicity
-
-            onSnapshot(q, (snapshot) => {
-                const suggestions = [];
-                snapshot.forEach((doc) => {
-                    suggestions.push({ id: doc.id, ...doc.data() });
-                });
-                renderSuggestions(suggestions.filter(s => s.status === 'pending')); // Filter client-side
-            }, (error) => {
-                console.error("Error listening to suggestions:", error);
-                document.getElementById('suggestions-list').innerHTML = `<p class="text-red-400">Error loading suggestions: ${error.message}</p>`;
-            });
-        };
-
-        // Render Suggestions
-        const renderSuggestions = (suggestions) => {
-            const list = document.getElementById('suggestions-list');
-            if (suggestions.length === 0) {
-                list.innerHTML = '<p class="text-green-400">✅ No pending suggestions!</p>';
-                return;
-            }
-
-            list.innerHTML = suggestions.map(s => `
-                <div class="p-3 bg-gray-700 rounded-lg border-l-4 border-orange-500">
-                    <p class="text-white font-semibold">${s.name} <span class="text-xs text-gray-400">by ${s.creator} (Suggested by: ${s.suggested_by.substring(0, 8)}...)</span></p>
-                    <div class="mt-2 space-x-2">
-                        <button onclick="approveSuggestion('${s.id}', '${s.name}', '${s.creator}', '${s.image_url}')" class="bg-green-600 hover:bg-green-700 text-white p-1 rounded-md text-xs"><i class="fas fa-check"></i> Approve</button>
-                        <button onclick="declineSuggestion('${s.id}', '${s.name}')" class="bg-red-600 hover:bg-red-700 text-white p-1 rounded-md text-xs"><i class="fas fa-times"></i> Decline</button>
-                    </div>
-                </div>
-            `).join('');
-        };
+                console.log(`Vote successfully recorded for World ID: ${worldId}`);
+            } catch (error) {
+                console.error("Error casting vote:", error);
+                
+                if (error.code === 'permission-denied') {
+                    showModal('Vote Locked', 'You have already cast your vote for this world. This action is blocked.');
+                    hasVoted[worldId] = true;
+                } else {
+                    showModal('Vote Failed', `Could not cast vote. Error code: ${error.code}`);
+                    buttonElement.disabled = false;
+                    buttonElement.textContent = 'Vote Now';
+                    buttonElement.classList.remove('voted-button');
+                    buttonElement.classList.add('vote-button');
+                    buttonElement.querySelector('i').className = 'fas fa-thumbs-up mr-2';
+                }
+            }
+        };
 
 
-        // --- 8. Modal Utility Functions (Modified for unified modal) ---
-        
-        window.openAdminModal = (mode) => {
-            const is_admin = isAdminClientSide();
-            const modalHeading = document.getElementById('modal-heading');
-            const suggestSection = document.getElementById('suggest-world-section');
-            const adminSections = document.getElementById('admin-sections');
+        // --- 6. Modal Functions (Utility) ---
 
-            if (mode === 'admin' && !is_admin) {
-                return showModal('Access Denied', 'Only designated administrators can access this panel.');
-            }
+        const adminModalBackdrop = document.getElementById('admin-modal-backdrop');
+        const suggestSection = document.getElementById('suggest-world-section');
+        const adminAccessArea = document.getElementById('admin-access-area');
+        const adminLoginSection = document.getElementById('admin-login-section');
+        const adminToolsSection = document.getElementById('admin-sections');
 
-            if (is_admin) {
-                // Admin sees everything
-                modalHeading.textContent = "Admin & Suggestion Panel";
-                suggestSection.classList.remove('hidden');
-                adminSections.classList.remove('hidden');
-                renderAdminWorldList(); // Load worlds for management
-                listenForSuggestions(); // Start listening for suggestions
-            } else {
-                // Standard user only sees Suggestion Form
-                modalHeading.textContent = "Suggest a World";
-                suggestSection.classList.remove('hidden');
-                adminSections.classList.add('hidden');
-            }
+        window.openAdminModal = (mode) => {
+            document.getElementById('modal-heading').textContent = (mode === 'admin') ? 'Admin & World Management' : 'Suggest a VRChat World';
 
-            document.getElementById('admin-modal-backdrop').classList.remove('hidden');
-            document.getElementById('admin-modal-backdrop').classList.add('flex');
-        };
+            // Always show the Suggest section
+            suggestSection.classList.remove('hidden');
 
-        window.hideAdminModal = () => {
-            document.getElementById('admin-modal-backdrop').classList.add('hidden');
-            document.getElementById('admin-modal-backdrop').classList.remove('flex');
-        };
-        
-        // General Modal/Alert functions (unchanged)
-        window.showModal = (title, body) => { /* ... */ };
-        window.hideModal = () => { /* ... */ };
+            if (mode === 'admin') {
+                adminAccessArea.classList.remove('hidden');
+
+                if (isAdminLoggedIn) {
+                    adminLoginSection.classList.add('hidden');
+                    adminToolsSection.classList.remove('hidden');
+                    // Refresh data for admin view
+                    renderAdminWorldList();
+                    listenForSuggestions();
+                } else {
+                    adminLoginSection.classList.remove('hidden');
+                    adminToolsSection.classList.add('hidden');
+                }
+            } else {
+                adminAccessArea.classList.add('hidden'); // Hide admin specific sections in 'suggest' mode
+            }
+
+            adminModalBackdrop.classList.add('open');
+        };
+
+        window.hideAdminModal = () => {
+            adminModalBackdrop.classList.remove('open');
+            document.getElementById('suggest-message').classList.add('hidden');
+        };
+
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        window.showModal = (title, body) => {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').textContent = body;
+            modalBackdrop.classList.remove('hidden');
+        };
+
+        window.hideModal = () => {
+            modalBackdrop.classList.add('hidden');
+        };
 
 
-        // Initialize on load
-        window.onload = initFirebase;
-    </script>
+        // --- 7. Suggest World Logic ---
+
+        const submitSuggestion = async (name, creator, image_url) => {
+            if (!db || !currentUserId) return false;
+            try {
+                const suggestionsRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
+                await addDoc(suggestionsRef, {
+                    name: name,
+                    creator: creator,
+                    image_url: image_url,
+                    suggested_by: currentUserId,
+                    status: 'pending',
+                    created_at: serverTimestamp(),
+                });
+                return true;
+            } catch (error) {
+                console.error("Error submitting suggestion:", error);
+                showModal('Suggestion Error', `Failed to submit. Error: ${error.message}`);
+                return false;
+            }
+        };
+
+        const suggestForm = document.getElementById('suggest-world-form');
+        suggestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('suggest-name').value.trim();
+            const creator = document.getElementById('suggest-creator').value.trim();
+            const image_url = document.getElementById('suggest-image').value.trim() || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
+
+            const messageArea = document.getElementById('suggest-message');
+            messageArea.classList.remove('hidden', 'text-red-400');
+            messageArea.classList.add('text-green-400');
+            messageArea.textContent = 'Submitting suggestion...';
+
+            if (await submitSuggestion(name, creator, image_url)) {
+                messageArea.textContent = `World "${name}" suggested successfully! An admin will review it.`;
+                suggestForm.reset();
+                document.getElementById('suggest-image').value = 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World';
+                setTimeout(() => hideAdminModal(), 1500);
+            } else {
+                messageArea.textContent = 'Failed to submit suggestion.';
+                messageArea.classList.remove('text-green-400');
+                messageArea.classList.add('text-red-400');
+            }
+        });
+
+
+        // --- 8. Admin CRUD Logic ---
+
+        // Internal function to add a world to the main roster (Used by Approve)
+        const addWorldToRoster = async (worldData) => {
+            if (!db || !isAdminLoggedIn) return false;
+            try {
+                const newWorldRef = collection(db, PUBLIC_COLLECTION_PATH);
+                await addDoc(newWorldRef, {
+                    name: worldData.name,
+                    creator: worldData.creator,
+                    image_url: worldData.image_url || 'https://placehold.co/400x250/374151/E5E7EB?text=VRChat+World',
+                    votes: worldData.votes || 0,
+                    created_at: serverTimestamp(),
+                });
+                return true;
+            } catch (error) {
+                console.error("Error adding world to roster:", error);
+                showModal('Admin Error', `Failed to add world. Permission denied or other error.`);
+                return false;
+            }
+        };
+
+        // Edit World (Exposed globally)
+        window.editWorld = async (worldId) => {
+            if (!isAdminLoggedIn) return showModal('Error', 'Unauthorized Access.');
+
+            const world = currentWorldData.find(w => w.id === worldId);
+            if (!world) return showModal('Error', 'World data not found for edit.');
+
+            const newName = prompt(`Edit Name for ${world.name}:`, world.name);
+            if (newName === null) return;
+            const newCreator = prompt(`Edit Creator for ${world.name}:`, world.creator);
+            if (newCreator === null) return;
+            const newImage = prompt(`Edit Image URL for ${world.name}:`, world.image_url);
+
+            try {
+                const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
+                await updateDoc(worldRef, {
+                    name: newName,
+                    creator: newCreator,
+                    image_url: newImage,
+                });
+                showModal('Success', `World "${newName}" updated!`);
+            } catch (error) {
+                console.error("Error editing world:", error);
+                showModal('Error', `Failed to update world. Check console.`);
+            }
+        };
+
+        // Delete World (Exposed globally)
+        window.deleteWorld = async (worldId, worldName) => {
+            if (!isAdminLoggedIn) return showModal('Error', 'Unauthorized Access.');
+            if (!confirm(`Are you sure you want to permanently delete world "${worldName}"? This cannot be undone.`)) return;
+
+            try {
+                const worldRef = doc(db, PUBLIC_COLLECTION_PATH, worldId);
+                await deleteDoc(worldRef);
+                showModal('Success', `World "${worldName}" deleted!`);
+            } catch (error) {
+                console.error("Error deleting world:", error);
+                showModal('Error', `Failed to delete world. Check console.`);
+            }
+        };
+
+        // Approve Suggestion (Exposed globally)
+        window.approveSuggestion = async (suggestionId, worldName, worldCreator, imageUrl) => {
+            if (!isAdminLoggedIn) return showModal('Error', 'Unauthorized Access.');
+
+            // 1. Add to main roster
+            const success = await addWorldToRoster({ name: worldName, creator: worldCreator, image_url: imageUrl, votes: 0 });
+
+            if (success) {
+                // 2. Delete the suggestion from the queue
+                try {
+                    const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
+                    await deleteDoc(suggestionRef); 
+                    showModal('Approved', `World "${worldName}" has been added to the main roster.`);
+                } catch (e) {
+                    showModal('Warning', `World was added, but failed to remove suggestion from queue. Manually decline if it persists.`);
+                }
+            }
+        };
+
+        // Decline Suggestion (Exposed globally)
+        window.declineSuggestion = async (suggestionId, worldName) => {
+            if (!isAdminLoggedIn) return showModal('Error', 'Unauthorized Access.');
+            if (!confirm(`Are you sure you want to decline and delete the suggestion for "${worldName}"?`)) return;
+
+            try {
+                const suggestionRef = doc(db, SUGGESTIONS_COLLECTION_PATH, suggestionId);
+                await deleteDoc(suggestionRef);
+                showModal('Declined', `Suggestion for "${worldName}" has been declined and removed.`);
+            } catch (error) {
+                console.error("Error declining suggestion:", error);
+                showModal('Error', `Failed to decline suggestion. Check console.`);
+            }
+        };
+
+        // Render Admin World List UI
+        const renderAdminWorldList = () => {
+            const list = document.getElementById('admin-world-list');
+            if (!isAdminLoggedIn) {
+                 list.innerHTML = '<p class="text-red-400">Login required for management tools.</p>';
+                 return;
+            }
+            list.innerHTML = currentWorldData.map(world => `
+                <div class="p-3 bg-gray-700 rounded-lg flex justify-between items-center">
+                    <span class="text-sm font-medium text-white">${world.name} (Votes: ${world.votes || 0})</span>
+                    <div class="space-x-2">
+                        <button onclick="editWorld('${world.id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white p-1 rounded-md text-xs"><i class="fas fa-edit"></i> Edit</button>
+                        <button onclick="deleteWorld('${world.id}', '${world.name}')" class="bg-red-600 hover:bg-red-700 text-white p-1 rounded-md text-xs"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            if (currentWorldData.length === 0) {
+                list.innerHTML = '<p class="text-gray-400">No worlds in the main roster to manage.</p>';
+            }
+        };
+
+        // Listen for Pending Suggestions
+        const listenForSuggestions = () => {
+            if (!db || !isAdminLoggedIn) return;
+            const suggestionsRef = collection(db, SUGGESTIONS_COLLECTION_PATH);
+            const q = query(suggestionsRef);
+
+            onSnapshot(q, (snapshot) => {
+                const suggestions = [];
+                snapshot.forEach((doc) => {
+                    suggestions.push({ id: doc.id, ...doc.data() });
+                });
+                renderSuggestions(suggestions.filter(s => s.status === 'pending')); 
+            }, (error) => {
+                console.error("Error listening to suggestions:", error);
+                document.getElementById('suggestions-list').innerHTML = `<p class="text-red-400">Error loading suggestions: ${error.message}</p>`;
+            });
+        };
+
+        // Render Suggestions UI
+        const renderSuggestions = (suggestions) => {
+            const list = document.getElementById('suggestions-list');
+            if (suggestions.length === 0) {
+                list.innerHTML = '<p class="text-green-400">✅ No pending suggestions!</p>';
+                return;
+            }
+
+            list.innerHTML = suggestions.map(s => `
+                <div class="p-3 bg-gray-700 rounded-lg border-l-4 border-orange-500">
+                    <p class="text-white font-semibold">${s.name} <span class="text-xs text-gray-400">by ${s.creator}</span></p>
+                    <p class="text-xs text-gray-400">Suggested by: ${s.suggested_by}</p>
+                    <div class="flex space-x-2 mt-2">
+                        <button onclick="approveSuggestion('${s.id}', '${s.name.replace(/'/g, "\\'")}', '${s.creator.replace(/'/g, "\\'")}', '${s.image_url.replace(/'/g, "\\'")}')" class="bg-green-600 hover:bg-green-700 text-white p-1 rounded-md text-xs"><i class="fas fa-check"></i> Approve</button>
+                        <button onclick="declineSuggestion('${s.id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-red-600 hover:bg-red-700 text-white p-1 rounded-md text-xs"><i class="fas fa-times"></i> Decline</button>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        // Final initialization call
+        initFirebase();
+    </script>
 </body>
 </html>
